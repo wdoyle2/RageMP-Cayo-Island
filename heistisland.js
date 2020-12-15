@@ -5,31 +5,64 @@ class HeistIslandMP {
     isMapLoaded = false;
     player = false;
 
+    islandBounds = [];
+
+    isPointInPolygon(x, y, polygon) {
+        if (typeof x !== 'number' || typeof y !== 'number') {
+            return mp.gui.chat.push('Invalid latitude or longitude. Numbers are expected')
+        } else if (!polygon || !Array.isArray(polygon)) {
+            return mp.gui.chat.push('Invalid polygon. Array with locations expected')
+        } else if (polygon.length === 0) {
+            return mp.gui.chat.push('Invalid polygon. Non-empty Array expected')
+        }
+
+        let inside = false
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const xi = polygon[i][0];
+            const yi = polygon[i][1]
+            const xj = polygon[j][0];
+            const yj = polygon[j][1]
+
+            const intersect = ((yi > y) !== (yj > y)) &&
+                (x < (xj - xi) * (y - yi) / (yj - yi) + xi)
+            if (intersect) inside = !inside
+        }
+        mp.gui.chat.push(JSON.stringify({inside: inside, x: x, y: y, polygon}))
+
+        return inside
+    };
+
     constructor() {
         this.player = mp.players.local;
+        this.islandBounds.push(new Array(3326.365, -4240.541));
+        this.islandBounds.push(new Array(5072.705, -3550.056));
+        this.islandBounds.push(new Array(6269.617, -6009.813));
+        this.islandBounds.push(new Array(4297.188,  -6994.53));
 
-        mp.events.add({
-            "render": () => {
+        setInterval(async () => {
+            if (!this.player) return;
 
-                if ((this.player.position.x >= 4254.411 && this.player.position.x <= 5407.103) && (this.player.position.y >= -6808.993 && this.player.position.y <= -3564.13) && !this.isMapLoaded) {
-                    this.isMapLoaded = true;
-                    mp.game.invoke("0x5E1460624D194A38", this.isMapLoaded);
-                } else if (!(this.player.position.x >= 4254.411 && this.player.position.x <= 5407.103) && !(this.player.position.y >= -6808.993 && this.player.position.y <= -3564.13) && this.isMapLoaded) {
-                    this.isMapLoaded = false;
-                    mp.game.invoke("0x5E1460624D194A38", this.isMapLoaded);
+            const isWithinIslandBounds = this.isPointInPolygon(this.player.position.x, this.player.position.y, this.islandBounds);
+
+
+            if (isWithinIslandBounds && !this.isMapLoaded) {
+                this.isMapLoaded = true;
+                mp.game.invoke("0x5E1460624D194A38", this.isMapLoaded);
+            } else if (!isWithinIslandBounds && this.isMapLoaded) {
+                this.isMapLoaded = false;
+                mp.game.invoke("0x5E1460624D194A38", this.isMapLoaded);
+            }
+
+            if (!this.isLoaded) {
+                this.isLoaded = true;
+                for (var i = 0; i < island.ipls.length; i++) {
+                    mp.game.streaming.requestIpl(island.ipls[i]); // interior name(IPL)
                 }
 
-                if (!this.isLoaded) {
-                    this.isLoaded = true;
-                    for (var i = 0; i < island.ipls.length; i++) {
-                        mp.game.streaming.requestIpl(island.ipls[i]); // interior name(IPL)
-                    }
-
-                    const interior = mp.game.interior.getInteriorAtCoords(4840.571, -5174.425, 2.0);
-                    mp.game.interior.refreshInterior(interior);
-                }
-            },
-        });
+                const interior = mp.game.interior.getInteriorAtCoords(4840.571, -5174.425, 2.0);
+                mp.game.interior.refreshInterior(interior);
+            }
+        }, 500);
     }
 
 }
