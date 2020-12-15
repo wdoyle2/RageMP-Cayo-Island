@@ -27,7 +27,6 @@ class HeistIslandMP {
                 (x < (xj - xi) * (y - yi) / (yj - yi) + xi)
             if (intersect) inside = !inside
         }
-        mp.gui.chat.push(JSON.stringify({inside: inside, x: x, y: y, polygon}))
 
         return inside
     };
